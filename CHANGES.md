@@ -1,3 +1,11 @@
+## 2.0.3
+* Add `asm inline` parsing (#151).
+* Ignore top level qualifiers in `__builtin_types_compatible_p` (#157).
+* Add attribute `goblint_cil_nested` to local variables in inner scopes (#155).
+* Expose `Cil.typeSigAddAttrs`.
+* Add option to suppress `long double` warnings (#136, #156).
+* Fix syntactic search (#147).
+
 ## 2.0.2
 * Rename `Rmtmps` to `RmUnused` (#135).
 * Add option to add return statement to `noreturn` functions (#129).
