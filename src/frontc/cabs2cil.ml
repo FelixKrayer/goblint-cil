@@ -856,7 +856,7 @@ module BlockChunk =
         in
         (* must mutate stmts in order to not break refs (for gotos) *)
         let rec doStmt ~first s: unit =
-          let doLoc = if first then doLoc else fun x -> x in
+          let doLoc = if first then fun x -> x else doLoc in
           s.skind <- match s.skind with
             | Instr xs -> Instr (doInstrs ~first xs)
             | Return (e, loc) -> Return (e, doLoc loc)
