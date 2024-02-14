@@ -1334,7 +1334,7 @@ stmt:
                   }
 |   RETURN exp_opt SEMICOLON
                   { (fun mkTemp loc args ->
-                         mkStmt (Return((fst $2) args, loc)))
+                         mkStmt (Return((fst $2) args, loc, locUnknown))) (* TODO: better eloc *)
                   }
 |   BREAK SEMICOLON
                   { (fun mkTemp loc args ->

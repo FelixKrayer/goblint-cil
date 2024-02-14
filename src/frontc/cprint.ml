@@ -650,7 +650,7 @@ and print_statement stat =
   | CONTINUE (loc) ->
       setLoc(loc);
       print "continue;"; new_line ()
-  | RETURN (exp, loc) ->
+  | RETURN (exp, loc, eloc) ->
       setLoc(loc);
       print "return";
       if exp = NOTHING

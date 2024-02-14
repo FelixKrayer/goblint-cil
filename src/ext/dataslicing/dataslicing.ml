@@ -336,16 +336,16 @@ let sliceInstr (inst : instr) : instr list =
       instrs @ (Call (ret', sliceExp 1 fn, args', l, el) :: set)
   | _ -> E.s (unimp "inst %a" d_instr inst)
 
-let sliceReturnExp (eo : exp option) (l : location) : stmtkind =
+let sliceReturnExp (eo : exp option) (l : location) (el : location) : stmtkind =
   match eo with
   | Some e ->
       begin
       match sliceExpAll e l with
-      | [], e' -> Return (Some e', l)
+      | [], e' -> Return (Some e', l, el)
       | instrs, e' -> Block (mkBlock [mkStmt (Instr instrs);
-                                      mkStmt (Return (Some e', l))])
+                                      mkStmt (Return (Some e', l, el))])
       end
-  | None -> Return (None, l)
+  | None -> Return (None, l, el)
 
 let rec sliceStmtKind (sk : stmtkind) : stmtkind =
   match sk with
@@ -354,7 +354,7 @@ let rec sliceStmtKind (sk : stmtkind) : stmtkind =
   | If (e, b1, b2, l, el) -> If (sliceExp 1 e, sliceBlock b1, sliceBlock b2, l, el)
   | Break l -> Break l
   | Continue l -> Continue l
-  | Return (eo, l) -> sliceReturnExp eo l
+  | Return (eo, l, el) -> sliceReturnExp eo l el
   | Switch (e, b, sl, l, el) -> Switch (sliceExp 1 e, sliceBlock b,
                                     Util.list_map sliceStmt sl, l, el)
   | Loop (b, l, el, so1, so2) -> Loop (sliceBlock b, l, el,

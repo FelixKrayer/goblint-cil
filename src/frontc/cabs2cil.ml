@@ -859,7 +859,7 @@ module BlockChunk =
           let doLoc = if first then fun x -> x else doLoc in
           s.skind <- match s.skind with
             | Instr xs -> Instr (doInstrs ~first xs)
-            | Return (e, loc) -> Return (e, doLoc loc)
+            | Return (e, loc, eloc) -> Return (e, doLoc loc, doLoc eloc)
             | Goto (s, loc) -> Goto (s, doLoc loc)
             | ComputedGoto (e, loc) -> ComputedGoto (e, doLoc loc)
             | Break loc -> Break (doLoc loc)
@@ -907,7 +907,7 @@ module BlockChunk =
         let rec doStmt s: unit =
           s.skind <- match s.skind with
             | Instr xs -> Instr (doInstrs xs)
-            | Return (e, loc) -> Return (e, doLoc loc)
+            | Return (e, loc, eloc) -> Return (e, doLoc loc, doLoc eloc)
             | Goto (s, loc) -> Goto (s, doLoc loc)
             | ComputedGoto (e, loc) -> ComputedGoto (e, doLoc loc)
             | Break loc -> Break (doLoc loc)
@@ -973,8 +973,8 @@ module BlockChunk =
 
     let skipChunk = empty
 
-    let returnChunk (e: exp option) (l: location) : chunk =
-      { stmts = [ mkStmt (Return(e, l)) ];
+    let returnChunk (e: exp option) (l: location) (el: location) : chunk =
+      { stmts = [ mkStmt (Return(e, l, el)) ];
         postins = [];
         cases = []
       }
@@ -5919,7 +5919,7 @@ and doAliasFun vtype (thisname:string) (othername:string)
                (argsToList formals) in
   let call = A.CALL (A.VARIABLE othername, args) in
   let stmt = if isVoidType rt then A.COMPUTATION(call, loc)
-                              else A.RETURN(call, loc)
+                              else A.RETURN(call, loc, loc)
   in
   let body = { A.blabels = []; A.battrs = []; A.bstmts = [stmt] } in
   let fdef = A.FUNDEF (sname, body, loc, loc) in
@@ -6471,7 +6471,7 @@ and doDecl (isglobal: bool) : A.definition -> chunk = function
               then
                 !currentFunctionFDEC.sbody.bstmts <-
                   !currentFunctionFDEC.sbody.bstmts
-                  @ [mkStmt (Return(retval, endloc))]
+                  @ [mkStmt (Return(retval, endloc, locUnknown))]
             end;
 
             (* ignore (E.log "The env after finishing the body of %s:\n%t\n"
@@ -6769,29 +6769,32 @@ and doStatement (s : A.statement) : chunk =
         currentLoc := loc';
         continueOrLabelChunk loc'
 
-    | A.RETURN (A.NOTHING, loc) ->
+    | A.RETURN (A.NOTHING, loc, eloc) ->
         let loc' = convLoc loc in
+        let eloc' = convLoc eloc in
         currentLoc := loc';
+        currentExpLoc := eloc';
         if not (isVoidType !currentReturnType) then
           ignore (warn "Return statement without a value in function returning %a" d_type !currentReturnType);
-        returnChunk None loc'
+        returnChunk None loc' eloc'
 
-    | A.RETURN (e, loc) ->
+    | A.RETURN (e, loc, eloc) ->
         let loc' = convLoc loc in
+        let eloc' = convLoc eloc in
         currentLoc := loc';
-        currentExpLoc := loc'; (* TODO: separate expression loc *)
+        currentExpLoc := eloc';
         (* Sometimes we return the result of a void function call *)
         if isVoidType !currentReturnType then begin
           ignore (warnOpt "Return statement with a value in function returning void");
           let (se, _, _) = doExp false e ADrop in
-          se @@ returnChunk None loc'
+          se @@ returnChunk None loc' eloc'
         end else begin
 	  let rt =
 	    typeRemoveAttributes ["warn_unused_result"] !currentReturnType
 	  in
           let (se, e', et) = doExp false e (AExp (Some rt)) in
           let (et'', e'') = castTo et rt e' in
-          se @@ (returnChunk (Some e'') loc')
+          se @@ (returnChunk (Some e'') loc' eloc')
         end
 
     | A.SWITCH (e, s, loc, eloc) ->

@@ -32,7 +32,7 @@ class fun_find_returns funname funid result : nopCilVisitor =
 
     method! vstmt stmt =
       match stmt.skind with
-      | Return (Some exp, loc) ->
+      | Return (Some exp, loc, eloc) ->
           result :=
             !result
             @ [
@@ -42,7 +42,7 @@ class fun_find_returns funname funid result : nopCilVisitor =
                   -1 );
               ];
           DoChildren
-      | Return (None, loc) ->
+      | Return (None, loc, eloc) ->
           result := !result @ [ ("", loc, "void", -1) ];
           DoChildren
       | _ -> DoChildren
@@ -72,7 +72,7 @@ class fun_find_sig funname funid result : nopCilVisitor =
 
     method! vstmt stmt =
       match stmt.skind with
-      | Return (Some exp, loc) ->
+      | Return (Some exp, loc, eloc) ->
           result :=
             !result
             @ [
@@ -82,7 +82,7 @@ class fun_find_sig funname funid result : nopCilVisitor =
                   -1 );
               ];
           SkipChildren
-      | Return (None, loc) ->
+      | Return (None, loc, eloc) ->
           result := !result @ [ ("", loc, "void", -1) ];
           SkipChildren
       | _ -> DoChildren

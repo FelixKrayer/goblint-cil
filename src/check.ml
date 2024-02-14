@@ -760,8 +760,9 @@ and checkStmt (s: stmt) =
           currentLoc := l;
           let te = checkExp false e in
           typeMatch te voidPtrType
-      | Return (re,l) -> begin
+      | Return (re, l, el) -> begin
           currentLoc := l;
+          currentExpLoc := el;
           match re, !currentReturnType with
             None, TVoid _  -> ()
           | _, TVoid _ -> ignore (warn "Invalid return value")
