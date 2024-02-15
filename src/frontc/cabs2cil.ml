@@ -5975,15 +5975,15 @@ and doDecl (isglobal: bool) : A.definition -> chunk = function
           acc
         end else
           match spec_res with
-          | Some spec_res -> acc @@ SynthetizeLoc.doChunkTail (createLocal spec_res name)
-          | None -> acc @@ SynthetizeLoc.doChunkTail (createAutoLocal name)
+          | Some spec_res -> acc @@ createLocal spec_res name
+          | None -> acc @@ createAutoLocal name
       in
       let res = List.fold_left doOneDeclarator empty nl in
 (*
       ignore (E.log "after doDecl %a: res=%a\n"
            d_loc !currentLoc d_chunk res);
 *)
-      res
+      SynthetizeLoc.doChunkTail res
 
 
 
