@@ -932,6 +932,49 @@ module BlockChunk =
         | stmts, postins ->
           doStmts stmts;
           c
+
+      let eDoInstr: instr -> instr = function
+        | Set (l, e, loc, eloc) -> Set (l, e, loc, doLoc eloc)
+        | VarDecl (v, loc) -> VarDecl (v, loc)
+        | Call (l, f, a, loc, eloc) -> Call (l, f, a, loc, doLoc eloc)
+        | Asm (a, b, c, d, e, loc) -> Asm (a, b, c, d, e, loc)
+
+      (** Change first stmt or instr eloc to synthetic. *)
+      let eDoChunkHead (c: chunk): chunk =
+        (* ignore (Pretty.eprintf "synthesizeFirstLoc %a\n" d_chunk c); *)
+        let doInstrs = function
+          | [] -> []
+          | x :: xs -> eDoInstr x :: xs
+        in
+        (* must mutate stmts in order to not break refs (for gotos) *)
+        let rec doStmt s: unit =
+          s.skind <- match s.skind with
+            | Instr xs -> Instr (doInstrs xs)
+            | Return (e, loc, eloc) -> Return (e, loc, doLoc eloc)
+            | Goto (s, loc) -> Goto (s, doLoc loc)
+            | ComputedGoto (e, loc) -> ComputedGoto (e, doLoc loc)
+            | Break loc -> Break (doLoc loc)
+            | Continue loc -> Continue (doLoc loc)
+            | If _
+            | Switch _
+            | Loop _ ->
+              s.skind
+            | Block b ->
+              doBlock b;
+              s.skind
+        and doBlock b =
+          doStmts b.bstmts
+        and doStmts = function
+          | [] -> ()
+          | x :: xs ->
+            doStmt x
+        in
+        match c.stmts, c.postins with
+        | [], [] -> c
+        | [], postins -> {c with postins = List.rev (doInstrs (List.rev postins))}
+        | stmts, postins ->
+          doStmts stmts;
+          c
     end
 
     let i2c (i: instr) =
@@ -5983,7 +6026,7 @@ and doDecl (isglobal: bool) : A.definition -> chunk = function
       ignore (E.log "after doDecl %a: res=%a\n"
            d_loc !currentLoc d_chunk res);
 *)
-      SynthetizeLoc.doChunkTail res
+      SynthetizeLoc.eDoChunkHead (SynthetizeLoc.doChunkTail res)
 
 
 
