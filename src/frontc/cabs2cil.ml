@@ -6026,6 +6026,8 @@ and doDecl (isglobal: bool) : A.definition -> chunk = function
       ignore (E.log "after doDecl %a: res=%a\n"
            d_loc !currentLoc d_chunk res);
 *)
+      (* First transformed assign instruction from declaration initializer has non-synthetic statement location.
+         All following locations are synthetic. *)
       SynthetizeLoc.eDoChunkHead (SynthetizeLoc.doChunkTail res)
 
 
@@ -6769,7 +6771,7 @@ and doStatement (s : A.statement) : chunk =
     | A.FOR(fc1,e2,e3,s,loc,eloc) -> begin
         let loc' = convLoc loc in
         let eloc' = convLoc eloc in
-        currentLoc := loc';
+        currentLoc := loc'; (* For loop statement location is not synthetic. *)
         currentExpLoc := SynthetizeLoc.doLoc eloc';
         enterScope (); (* Just in case we have a declaration *)
         let (se1, _, _) =
@@ -6777,6 +6779,9 @@ and doStatement (s : A.statement) : chunk =
             FC_EXP e1 -> doExp false e1 ADrop
           | FC_DECL d1 -> (doDecl false d1, zero, voidType)
         in
+        (* First instruction (assignment) in for loop initializer has non-synthetic statement location before for loop.
+           Its expression location inside for loop parentheses is synthetic.
+           All other instructions are fully synthetic. *)
         let se1 = SynthetizeLoc.eDoChunkHead (SynthetizeLoc.doChunkTail se1) in
         let (se3, _, _) = doExp false e3 ADrop in
         let se3 = SynthetizeLoc.doChunkHead se3 in
