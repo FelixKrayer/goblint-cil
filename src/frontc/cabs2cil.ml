@@ -859,7 +859,7 @@ module BlockChunk =
           let doLoc = if first then fun x -> x else doLoc in
           s.skind <- match s.skind with
             | Instr xs -> Instr (doInstrs ~first xs)
-            | Return (e, loc) -> Return (e, doLoc loc)
+            | Return (e, loc, eloc) -> Return (e, doLoc loc, doLoc eloc)
             | Goto (s, loc) -> Goto (s, doLoc loc)
             | ComputedGoto (e, loc) -> ComputedGoto (e, doLoc loc)
             | Break loc -> Break (doLoc loc)
@@ -907,7 +907,50 @@ module BlockChunk =
         let rec doStmt s: unit =
           s.skind <- match s.skind with
             | Instr xs -> Instr (doInstrs xs)
-            | Return (e, loc) -> Return (e, doLoc loc)
+            | Return (e, loc, eloc) -> Return (e, doLoc loc, doLoc eloc)
+            | Goto (s, loc) -> Goto (s, doLoc loc)
+            | ComputedGoto (e, loc) -> ComputedGoto (e, doLoc loc)
+            | Break loc -> Break (doLoc loc)
+            | Continue loc -> Continue (doLoc loc)
+            | If _
+            | Switch _
+            | Loop _ ->
+              s.skind
+            | Block b ->
+              doBlock b;
+              s.skind
+        and doBlock b =
+          doStmts b.bstmts
+        and doStmts = function
+          | [] -> ()
+          | x :: xs ->
+            doStmt x
+        in
+        match c.stmts, c.postins with
+        | [], [] -> c
+        | [], postins -> {c with postins = List.rev (doInstrs (List.rev postins))}
+        | stmts, postins ->
+          doStmts stmts;
+          c
+
+      let eDoInstr: instr -> instr = function
+        | Set (l, e, loc, eloc) -> Set (l, e, loc, doLoc eloc)
+        | VarDecl (v, loc) -> VarDecl (v, loc)
+        | Call (l, f, a, loc, eloc) -> Call (l, f, a, loc, doLoc eloc)
+        | Asm (a, b, c, d, e, loc) -> Asm (a, b, c, d, e, loc)
+
+      (** Change first stmt or instr eloc to synthetic. *)
+      let eDoChunkHead (c: chunk): chunk =
+        (* ignore (Pretty.eprintf "synthesizeFirstLoc %a\n" d_chunk c); *)
+        let doInstrs = function
+          | [] -> []
+          | x :: xs -> eDoInstr x :: xs
+        in
+        (* must mutate stmts in order to not break refs (for gotos) *)
+        let rec doStmt s: unit =
+          s.skind <- match s.skind with
+            | Instr xs -> Instr (doInstrs xs)
+            | Return (e, loc, eloc) -> Return (e, loc, doLoc eloc)
             | Goto (s, loc) -> Goto (s, doLoc loc)
             | ComputedGoto (e, loc) -> ComputedGoto (e, doLoc loc)
             | Break loc -> Break (doLoc loc)
@@ -973,8 +1016,8 @@ module BlockChunk =
 
     let skipChunk = empty
 
-    let returnChunk (e: exp option) (l: location) : chunk =
-      { stmts = [ mkStmt (Return(e, l)) ];
+    let returnChunk (e: exp option) (l: location) (el: location) : chunk =
+      { stmts = [ mkStmt (Return(e, l, el)) ];
         postins = [];
         cases = []
       }
@@ -5919,11 +5962,11 @@ and doAliasFun vtype (thisname:string) (othername:string)
                (argsToList formals) in
   let call = A.CALL (A.VARIABLE othername, args) in
   let stmt = if isVoidType rt then A.COMPUTATION(call, loc)
-                              else A.RETURN(call, loc)
+                              else A.RETURN(call, loc, loc)
   in
   let body = { A.blabels = []; A.battrs = []; A.bstmts = [stmt] } in
   let fdef = A.FUNDEF (sname, body, loc, loc) in
-  ignore (doDecl true fdef);
+  ignore (doDecl true false fdef); (* doAliasFun only called for isglobal by guard *)
   (* get the new function *)
   let v,_ = try lookupGlobalVar thisname
             with Not_found -> E.s (bug "error in doDecl") in
@@ -5931,9 +5974,10 @@ and doAliasFun vtype (thisname:string) (othername:string)
 
 
 (* Do one declaration *)
-and doDecl (isglobal: bool) : A.definition -> chunk = function
+and doDecl (isglobal: bool) (isstmt: bool) : A.definition -> chunk = function
   | A.DECDEF ((s, nl), loc) ->
-      currentLoc := convLoc loc;
+      if isglobal || isstmt then
+        currentLoc := convLoc loc;
       currentExpLoc := convLoc loc; (* eloc for local initializer assignment instruction *)
       (* Do the specifiers exactly once *)
       let sugg =
@@ -5953,9 +5997,7 @@ and doDecl (isglobal: bool) : A.definition -> chunk = function
       (* Do all the variables and concatenate the resulting statements *)
       let doOneDeclarator (acc: chunk) (name: init_name) =
         let (n,ndt,a,l),_ = name in
-        currentLoc := convLoc l;
         currentExpLoc := convLoc l; (* eloc for local initializer assignment instruction *)
-        (* Do the specifiers exactly once *)
         if isglobal then begin
           let spec_res = match spec_res with Some s -> s | _ -> failwith "Option.get" in
           let bt,_,_,attrs = spec_res in
@@ -5977,33 +6019,37 @@ and doDecl (isglobal: bool) : A.definition -> chunk = function
           acc
         end else
           match spec_res with
-          | Some spec_res -> acc @@ SynthetizeLoc.doChunkTail (createLocal spec_res name)
-          | None -> acc @@ SynthetizeLoc.doChunkTail (createAutoLocal name)
+          | Some spec_res -> acc @@ createLocal spec_res name
+          | None -> acc @@ createAutoLocal name
       in
       let res = List.fold_left doOneDeclarator empty nl in
 (*
       ignore (E.log "after doDecl %a: res=%a\n"
            d_loc !currentLoc d_chunk res);
 *)
-      res
+      (* First transformed assign instruction from declaration initializer has non-synthetic statement location.
+         All following locations are synthetic. *)
+      SynthetizeLoc.eDoChunkHead (SynthetizeLoc.doChunkTail res)
 
 
 
   | A.TYPEDEF (ng, loc) ->
-     currentLoc := convLoc(loc);
-     doTypedef ng; empty
+      if isglobal || isstmt then
+        currentLoc := convLoc(loc);
+      doTypedef ng; empty
 
   | A.ONLYTYPEDEF (s, loc) ->
-      currentLoc := convLoc(loc);
+      if isglobal || isstmt then
+        currentLoc := convLoc(loc);
       doOnlyTypedef s; empty
 
   | A.GLOBASM (s,loc) when isglobal ->
-      currentLoc := convLoc(loc);
+      currentLoc := convLoc(loc); (* isglobal by guard *)
       cabsPushGlobal (GAsm (s, !currentLoc));
       empty
 
   | A.PRAGMA (a, loc) when isglobal -> begin
-      currentLoc := convLoc(loc);
+      currentLoc := convLoc(loc); (* isglobal by guard *)
       match doAttr ("dummy", [a]) with
         [Attr("dummy", [a'])] ->
           let a'' =
@@ -6026,7 +6072,7 @@ and doDecl (isglobal: bool) : A.definition -> chunk = function
               (body : A.block), loc, _)
       when isglobal && isExtern specs && isInline specs
            && (H.mem genv (n ^ "__extinline")) ->
-       currentLoc := convLoc(loc);
+       currentLoc := convLoc(loc); (* isglobal by guard *)
        let othervi, _ = lookupVar (n ^ "__extinline") in
        if othervi.vname = n then
          (* The previous entry in the env is also an extern inline version
@@ -6041,7 +6087,7 @@ and doDecl (isglobal: bool) : A.definition -> chunk = function
                      ^^ " reserved for CIL.\n") n n n)
        end;
        (* Treat it as a prototype *)
-       doDecl isglobal (A.DECDEF ((specs, [((n,dt,a,loc'), A.NO_INIT)]), loc))
+       doDecl isglobal isstmt (A.DECDEF ((specs, [((n,dt,a,loc'), A.NO_INIT)]), loc))
 
   | A.FUNDEF (((specs,(n,dt,a, _)) : A.single_name),
               (body : A.block), loc1, loc2) when isglobal ->
@@ -6049,7 +6095,7 @@ and doDecl (isglobal: bool) : A.definition -> chunk = function
       let funloc = convLoc (joinLoc loc1 loc2) in (* TODO: do in parser and include RBRACE end *)
       let endloc = convLoc (joinLoc loc2 loc2) in (* TODO: what to do about range of inserted Return? *)
 (*      ignore (E.log "Definition of %s at %a\n" n d_loc funloc); *)
-      currentLoc := funloc;
+      currentLoc := funloc; (* isglobal by guard *)
       currentExpLoc := funloc; (* TODO: location just for declaration *)
       E.withContext
         (fun _ -> dprintf "2cil: %s" n)
@@ -6471,7 +6517,7 @@ and doDecl (isglobal: bool) : A.definition -> chunk = function
               then
                 !currentFunctionFDEC.sbody.bstmts <-
                   !currentFunctionFDEC.sbody.bstmts
-                  @ [mkStmt (Return(retval, endloc))]
+                  @ [mkStmt (Return(retval, endloc, locUnknown))]
             end;
 
             (* ignore (E.log "The env after finishing the body of %s:\n%t\n"
@@ -6488,7 +6534,8 @@ and doDecl (isglobal: bool) : A.definition -> chunk = function
     end (* FUNDEF *)
 
   | LINKAGE (n, loc, dl) ->
-      currentLoc := convLoc loc;
+      if isglobal || isstmt then
+        currentLoc := convLoc loc;
       if n <> "C" then
         ignore (warn "Encountered linkage specification \"%s\"" n);
       if not isglobal then
@@ -6496,7 +6543,7 @@ and doDecl (isglobal: bool) : A.definition -> chunk = function
       (* For now drop the linkage on the floor !!! *)
       List.iter
         (fun d ->
-          let s = doDecl isglobal d in
+          let s = doDecl isglobal isstmt d in
           if isNotEmpty s then
             E.s (bug "doDecl returns non-empty statement for global"))
         dl;
@@ -6728,15 +6775,18 @@ and doStatement (s : A.statement) : chunk =
     | A.FOR(fc1,e2,e3,s,loc,eloc) -> begin
         let loc' = convLoc loc in
         let eloc' = convLoc eloc in
-        currentLoc := SynthetizeLoc.doLoc loc';
+        currentLoc := loc'; (* For loop statement location is not synthetic. *)
         currentExpLoc := SynthetizeLoc.doLoc eloc';
         enterScope (); (* Just in case we have a declaration *)
         let (se1, _, _) =
           match fc1 with
             FC_EXP e1 -> doExp false e1 ADrop
-          | FC_DECL d1 -> (doDecl false d1, zero, voidType)
+          | FC_DECL d1 -> (doDecl false false d1, zero, voidType)
         in
-        let se1 = SynthetizeLoc.doChunkHead se1 in
+        (* First instruction (assignment) in for loop initializer has non-synthetic statement location before for loop.
+           Its expression location inside for loop parentheses is synthetic.
+           All other instructions are fully synthetic. *)
+        let se1 = SynthetizeLoc.eDoChunkHead (SynthetizeLoc.doChunkTail se1) in
         let (se3, _, _) = doExp false e3 ADrop in
         let se3 = SynthetizeLoc.doChunkHead se3 in
         startLoop false;
@@ -6769,29 +6819,32 @@ and doStatement (s : A.statement) : chunk =
         currentLoc := loc';
         continueOrLabelChunk loc'
 
-    | A.RETURN (A.NOTHING, loc) ->
+    | A.RETURN (A.NOTHING, loc, eloc) ->
         let loc' = convLoc loc in
+        let eloc' = convLoc eloc in
         currentLoc := loc';
+        currentExpLoc := eloc';
         if not (isVoidType !currentReturnType) then
           ignore (warn "Return statement without a value in function returning %a" d_type !currentReturnType);
-        returnChunk None loc'
+        returnChunk None loc' eloc'
 
-    | A.RETURN (e, loc) ->
+    | A.RETURN (e, loc, eloc) ->
         let loc' = convLoc loc in
+        let eloc' = convLoc eloc in
         currentLoc := loc';
-        currentExpLoc := loc'; (* TODO: separate expression loc *)
+        currentExpLoc := eloc';
         (* Sometimes we return the result of a void function call *)
         if isVoidType !currentReturnType then begin
           ignore (warnOpt "Return statement with a value in function returning void");
           let (se, _, _) = doExp false e ADrop in
-          se @@ returnChunk None loc'
+          se @@ returnChunk None loc' eloc'
         end else begin
 	  let rt =
 	    typeRemoveAttributes ["warn_unused_result"] !currentReturnType
 	  in
           let (se, e', et) = doExp false e (AExp (Some rt)) in
           let (et'', e'') = castTo et rt e' in
-          se @@ (returnChunk (Some e'') loc')
+          se @@ (returnChunk (Some e'') loc' eloc')
         end
 
     | A.SWITCH (e, s, loc, eloc) ->
@@ -6900,7 +6953,7 @@ and doStatement (s : A.statement) : chunk =
       end
 
     | A.DEFINITION d ->
-        let s = doDecl false d  in
+        let s = doDecl false true d  in
 (*
         ignore (E.log "Def at %a: %a\n" d_loc !currentLoc d_chunk s);
 *)
@@ -7011,7 +7064,7 @@ let convFile (f : A.file) : Cil.file =
 
   let globalidx = ref 0 in
   let doOneGlobal (d: A.definition) =
-    let s = doDecl true d in
+    let s = doDecl true false d in
     if isNotEmpty s then
       E.s (bug "doDecl returns non-empty statement for global");
     (* See if this is one of the globals which we can leave alone. Increment

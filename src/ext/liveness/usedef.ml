@@ -190,8 +190,8 @@ let computeUseDefStmtKind ?(acc_used=VS.empty)
   let ve e = ignore (visitCilExpr useDefVisitor e) in
   let _ =
     match sk with
-      Return (None, _) -> ()
-    | Return (Some e, _) -> ve e
+      Return (None, _, _) -> ()
+    | Return (Some e, _, _) -> ve e
     | If (e, _, _, _, _) -> ve e
     | Break _ | Goto _ | Continue _ -> ()
     | ComputedGoto (e, _) -> ve e
@@ -218,8 +218,8 @@ let rec computeDeepUseDefStmtKind ?(acc_used=VS.empty)
   varDefs := acc_defs;
   let ve e = ignore (visitCilExpr useDefVisitor e) in
   match sk with
-    Return (None, _) -> !varUsed, !varDefs
-  | Return (Some e, _) ->
+    Return (None, _, _) -> !varUsed, !varDefs
+  | Return (Some e, _, _) ->
       let _ = ve e in
       !varUsed, !varDefs
   | If (e, tb, fb, _, _) ->

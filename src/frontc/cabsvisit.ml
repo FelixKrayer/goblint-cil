@@ -393,9 +393,9 @@ and childrenStatement vis s =
       if fc1' != fc1 || e2' != e2 || e3' != e3 || s4' != s4
       then FOR (fc1', e2', e3', s4', l, el) else s
   | BREAK _ | CONTINUE _ | GOTO _ -> s
-  | RETURN (e, l) ->
+  | RETURN (e, l, el) ->
       let e' = ve e in
-      if e' != e then RETURN (e', l) else s
+      if e' != e then RETURN (e', l, el) else s
   | SWITCH (e, s1, l, el) ->
       let e' = ve e in
       let s1' = vs l s1 in

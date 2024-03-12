@@ -93,7 +93,7 @@ begin
   | FOR(_,_,_,_,loc,_) -> loc
   | BREAK(loc) -> loc
   | CONTINUE(loc) -> loc
-  | RETURN(_,loc) -> loc
+  | RETURN(_,loc,_) -> loc
   | SWITCH(_,_,loc,_) -> loc
   | CASE(_,_,loc,_) -> loc
   | CASERANGE(_,_,_,loc,_) -> loc

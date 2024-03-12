@@ -170,7 +170,7 @@ let rec search_stmt_list_for_var list name varid includeCallTmp =
       ( match x.skind with
       | Instr ins_list ->
           search_instr_list_for_var ins_list name varid includeCallTmp
-      | Return (Some exp, loc) ->
+      | Return (Some exp, loc, eloc) ->
           search_expression exp name loc varid includeCallTmp
       | ComputedGoto (exp, loc) ->
           search_expression exp name loc varid includeCallTmp

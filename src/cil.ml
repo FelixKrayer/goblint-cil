@@ -767,8 +767,9 @@ and stmtkind =
   | Instr  of instr list               (** A group of instructions that do not
                                            contain control flow. Control
                                            implicitly falls through. *)
-  | Return of exp option * location     (** The return statement. This is a
-                                            leaf in the CFG. *)
+  | Return of exp option * location * location (** The return statement. This is a
+                                                   leaf in the CFG.
+                                                   Second location is just for expression. *)
 
   | Goto of stmt ref * location         (** A goto statement. Appears from
                                             actual goto's in the code. *)
@@ -1145,7 +1146,7 @@ let rec get_stmtLoc (statement : stmtkind) =
   match statement with
       Instr([]) -> lu
     | Instr(hd::tl) -> get_instrLoc(hd)
-    | Return(_, loc) -> loc
+    | Return(_, loc, _) -> loc
     | Goto(_, loc) -> loc
     | ComputedGoto(_, loc) -> loc
     | Break(loc) -> loc
@@ -3861,11 +3862,11 @@ class defaultCilPrinterClass : cilPrinter = object (self)
           ++ self#pBlock () thenBlock)
 
   method private pStmtKind (next: stmt) () = function
-      Return(None, l) ->
+      Return(None, l, el) ->
         self#pLineDirective l
           ++ text "return;"
 
-    | Return(Some e, l) ->
+    | Return(Some e, l, el) ->
         self#pLineDirective l
           ++ text "return ("
           ++ self#pExp () e
@@ -5363,13 +5364,13 @@ and childrenStmt (toPrepend: instr list ref) : cilVisitor -> stmt -> stmt =
   (* Just change the statement kind *)
   let skind' =
     match s.skind with
-      Break _ | Continue _ | Goto _ | Return (None, _) -> s.skind
+      Break _ | Continue _ | Goto _ | Return (None, _, _) -> s.skind
     | ComputedGoto (e, l) ->
          let e' = fExp e in
          if e' != e then ComputedGoto (e', l) else s.skind
-    | Return (Some e, l) ->
+    | Return (Some e, l, el) ->
         let e' = fExp e in
-        if e' != e then Return (Some e', l) else s.skind
+        if e' != e then Return (Some e', l, el) else s.skind
     | Loop (b, l, el, s1, s2) ->
         let b' = fBlock b in
         if b' != b then Loop (b', l, el, s1, s2) else s.skind

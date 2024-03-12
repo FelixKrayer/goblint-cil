@@ -972,9 +972,9 @@ statement_no_null:
 	                         {CASERANGE (fst $2, fst $4, $6, joinLoc $1 $7, joinLoc $1 $5)}
 |   DEFAULT COLON statement location
 	                         {DEFAULT ($3, joinLoc $1 $4, joinLoc $1 $2)}
-|   RETURN SEMICOLON		 {RETURN (NOTHING, joinLoc $1 $2)}
+|   RETURN SEMICOLON		 {RETURN (NOTHING, joinLoc $1 $2, cabslu)}
 |   RETURN comma_expression SEMICOLON
-	                         {RETURN (smooth_expression (fst $2), joinLoc $1 $3)}
+	                         {RETURN (smooth_expression (fst $2), joinLoc $1 $3, joinLoc (snd $2) $3)}
 |   BREAK SEMICOLON     {BREAK (joinLoc $1 $2)}
 |   CONTINUE SEMICOLON	 {CONTINUE (joinLoc $1 $2)}
 |   GOTO IDENT SEMICOLON

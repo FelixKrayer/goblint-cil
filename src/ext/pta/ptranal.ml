@@ -304,7 +304,7 @@ let analyze_instr (i : instr ) : unit =
 let rec analyze_stmt (s : stmt ) : unit =
   match s.skind with
       Instr il -> List.iter analyze_instr il
-    | Return (eo, l) ->
+    | Return (eo, l, el) ->
         begin
           match eo with
               Some e ->

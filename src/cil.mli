@@ -964,8 +964,9 @@ and stmtkind =
   (** A group of instructions that do not contain control flow. Control
      implicitly falls through. *)
 
-  | Return of exp option * location
-   (** The return statement. This is a leaf in the CFG. *)
+  | Return of exp option * location * location
+   (** The return statement. This is a leaf in the CFG.
+       Second location is just for expression. *)
 
   | Goto of stmt ref * location
    (** A goto statement. Appears from actual goto's in the code or from
