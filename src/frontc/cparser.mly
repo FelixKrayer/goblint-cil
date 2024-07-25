@@ -1619,8 +1619,12 @@ conditional_attr:
 |   logical_or_attr QUEST conditional_attr COLON conditional_attr
                                           { QUESTION($1, $3, $5) }
 
+assignment_attr:
+    conditional_attr              { $1 }
+|   unary_attr EQ assignment_attr { BINARY(ASSIGN, $1, $3) }
 
-attr: conditional_attr                    { $1 }
+
+attr: assignment_attr                    { $1 }
 ;
 
 attr_list_ne:
