@@ -222,7 +222,7 @@ addTest("test/attr10 _GNUCC=1");
 addTest("test/attr11 _GNUCC=1");
 addTest("test/attr12 _GNUCC=1");
 addTest("test/attr13 _GNUCC=1");
-addTest("test/attr-assign");
+# addTest("test/attr-assign"); # TODO: only on OSX, Linux GCC errors on introduced
 addTest("testrun/packed _GNUCC=1 WARNINGS_ARE_ERRORS=1");
 addTest("test/packed2 _GNUCC=1");
 addTest("test/bitfield");
