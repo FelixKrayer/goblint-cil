@@ -1494,6 +1494,7 @@ primary_attr:
 |   LPAREN attr RPAREN                  { $2 }
 |   IDENT IDENT                          { CALL(VARIABLE (fst $1), [VARIABLE (fst $2)]) }
 |   CST_INT                              { CONSTANT(CONST_INT (fst $1)) }
+|   CST_FLOAT                            { CONSTANT(CONST_FLOAT (fst $1)) }
 |   const_string_or_wstring                 { CONSTANT(fst $1) }
                                            /*(* Const when it appears in
                                               attribute lists, is translated
