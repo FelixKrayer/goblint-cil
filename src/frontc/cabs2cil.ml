@@ -2940,6 +2940,8 @@ and doAttr (a: A.attribute) : attribute list =
             ABinOp(LAnd, ae aa1, ae aa2)
         | A.BINARY(A.OR, aa1, aa2) ->
             ABinOp(LOr, ae aa1, ae aa2)
+        | A.BINARY(A.ASSIGN, aa1, aa2) ->
+            AAssign(ae aa1, ae aa2)
         | A.BINARY(abop, aa1, aa2) ->
             ABinOp (convBinOp abop, ae aa1, ae aa2)
         | A.UNARY(A.PLUS, aa) -> ae aa
