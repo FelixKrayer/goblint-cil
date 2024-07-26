@@ -1495,6 +1495,7 @@ primary_attr:
 |   IDENT IDENT                          { CALL(VARIABLE (fst $1), [VARIABLE (fst $2)]) }
 |   CST_INT                              { CONSTANT(CONST_INT (fst $1)) }
 |   CST_FLOAT                            { CONSTANT(CONST_FLOAT (fst $1)) }
+|   CST_FLOAT CST_FLOAT                  { CONSTANT(CONST_FLOAT (fst $1 ^ fst $2)) } /* Clang-like hack to parse version numbers like "10.13.4" (https://github.com/goblint/cil/pull/171#issuecomment-2250670652). We lex them as "10.13" and ".4". */
 |   const_string_or_wstring                 { CONSTANT(fst $1) }
                                            /*(* Const when it appears in
                                               attribute lists, is translated
