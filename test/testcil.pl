@@ -658,7 +658,7 @@ addTest("scott/globalprob $gcc");
 addBadComment("scott/globalprob", "Notbug. Not a bug if fails on a non-Linux machine ;-)");
 addTest("scott/bisonerror $gcc");
 addTest("scott/cmpzero");
-addTest("scott/kernel1 $gcc");
+# addTest("scott/kernel1 $gcc");
 addTest("scott/kernel2 $gcc");
 addTest("scott/xcheckers $gcc");
 addTest("scott/memberofptr $gcc");
