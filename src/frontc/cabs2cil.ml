@@ -2927,6 +2927,7 @@ and doAttr (a: A.attribute) : attribute list =
             | _ ->
                 E.s (error "Invalid attribute constant: %s")
           end
+        | A.CONSTANT (A.CONST_FLOAT str) -> ACons (str, [])
         | A.CALL(A.VARIABLE n, args) -> begin
             let n' = if strip then stripUnderscore n else n in
             let ae' = Util.list_map ae args in
