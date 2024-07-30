@@ -1,4 +1,4 @@
-## 2.0.4 (unreleased)
+## 2.0.4
 * Add `Return` statement expression location (#167).
 * Add `availability` attribute support (#168, #171).
 * Remove unused `Libmaincil` module (#165).
