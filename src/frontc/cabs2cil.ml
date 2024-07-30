@@ -2927,6 +2927,7 @@ and doAttr (a: A.attribute) : attribute list =
             | _ ->
                 E.s (error "Invalid attribute constant: %s")
           end
+        | A.CONSTANT (A.CONST_FLOAT str) -> ACons (str, [])
         | A.CALL(A.VARIABLE n, args) -> begin
             let n' = if strip then stripUnderscore n else n in
             let ae' = Util.list_map ae args in
@@ -2940,6 +2941,8 @@ and doAttr (a: A.attribute) : attribute list =
             ABinOp(LAnd, ae aa1, ae aa2)
         | A.BINARY(A.OR, aa1, aa2) ->
             ABinOp(LOr, ae aa1, ae aa2)
+        | A.BINARY(A.ASSIGN, aa1, aa2) ->
+            AAssign(ae aa1, ae aa2)
         | A.BINARY(abop, aa1, aa2) ->
             ABinOp (convBinOp abop, ae aa1, ae aa2)
         | A.UNARY(A.PLUS, aa) -> ae aa
