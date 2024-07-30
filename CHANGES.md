@@ -1,5 +1,6 @@
 ## 2.0.4 (unreleased)
 * Add `Return` statement expression location (#167).
+* Add `availability` attribute support (#168, #171).
 * Remove unused `Libmaincil` module (#165).
 * Fix some synthetic locations (#166, #167).
 
