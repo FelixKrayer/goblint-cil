@@ -701,9 +701,11 @@
        (* We check that they are defined in the same way. This is a fairly
             conservative check. *)
        List.iter2
-         (fun (old_iname, old_attrs, old_iv, _) (iname, attrs, iv, _) -> (* TODO: combine attributes somewhere? *)
+         (fun (old_iname, old_attrs, old_iv, _) (iname, attrs, iv, _) ->
            if old_iname <> iname then
              raise (Failure "(different names for enumeration items)");
+           if old_attrs <> attrs then
+             raise (Failure "(different enumerator attributes)");
            let samev =
              match (constFold true old_iv, constFold true iv) with
              | Const (CInt (oldi, _, _)), Const (CInt (i, _, _)) ->
