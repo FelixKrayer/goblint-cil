@@ -199,8 +199,9 @@ and childrenTypeSpecifier vis ts =
       if fg' != fg then Tunion( n, Some fg', extraAttrs) else ts
   | Tenum (n, Some ei, extraAttrs) ->
       let doOneEnumItem ((s, attrs, e, loc) as ei) =
+        let attrs' = visitCabsAttributes vis attrs in
         let e' = visitCabsExpression vis e in
-        if e' != e then (s, attrs, e', loc) else ei (* TODO: visit attrs? *)
+        if attrs' != attrs || e' != e then (s, attrs', e', loc) else ei
       in
       vis#vEnterScope ();
       let ei' = mapNoCopy doOneEnumItem ei in
