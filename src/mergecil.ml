@@ -701,7 +701,7 @@
        (* We check that they are defined in the same way. This is a fairly
             conservative check. *)
        List.iter2
-         (fun (old_iname, old_iv, _) (iname, iv, _) ->
+         (fun (old_iname, old_attrs, old_iv, _) (iname, attrs, iv, _) -> (* TODO: combine attributes somewhere? *)
            if old_iname <> iname then
              raise (Failure "(different names for enumeration items)");
            let samev =
@@ -1545,12 +1545,12 @@
                     as the variables *)
                  ei.eitems <-
                    Util.list_map
-                     (fun (n, i, loc) ->
+                     (fun (n, attrs, i, loc) ->
                        let newname, _ =
                          A.newAlphaName ~alphaTable:vtAlpha ~undolist:None
                            ~lookupname:n ~data:!currentLoc
                        in
-                       (newname, i, loc))
+                       (newname, attrs, i, loc))
                      ei.eitems;
                  mergePushGlobals (visitCilGlobal renameVisitor g)
              | Some (ei', _) ->

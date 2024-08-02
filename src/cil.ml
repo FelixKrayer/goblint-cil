@@ -399,7 +399,7 @@ and fieldinfo = {
     enumeration. Make sure you have a [GEnumTag] for each of of these.   *)
 and enuminfo = {
     mutable ename: string;              (** The name. Always non-empty *)
-    mutable eitems: (string * exp * location) list; (** Items with names
+    mutable eitems: (string * attributes * exp * location) list; (** Items with names
                                                       and values. This list
                                                       should be
                                                       non-empty. The item
@@ -4014,8 +4014,10 @@ class defaultCilPrinterClass : cilPrinter = object (self)
           text "enum" ++ align ++ text (" " ^ enum.ename) ++
           text " {" ++ line
           ++ (docList ~sep:(chr ',' ++ line)
-                (fun (n,i, loc) ->
-                  text (n ^ " = ")
+                (fun (n, attrs, i, loc) ->
+                  text n
+                    ++ self#pAttrs () attrs
+                    ++ text (n ^ " = ")
                     ++ self#pExp () i)
                 () enum.eitems)
           ++ unalign ++ line ++ text "} "
@@ -5622,7 +5624,7 @@ and childrenGlobal (vis: cilVisitor) (g: global) : global =
   | GEnumTag (enum, _) ->
       (* (trace "visit" (dprintf "visiting global enum %s\n" enum.ename)); *)
       (* Do the values and attributes of the enumerated items *)
-      let itemVisit (name, exp, loc) = (name, visitCilExpr vis exp, loc) in
+      let itemVisit (name, attrs, exp, loc) = (name, visitCilAttributes vis attrs, visitCilExpr vis exp, loc) in
       enum.eitems <- mapNoCopy itemVisit enum.eitems;
       enum.eattr <- visitCilAttributes vis enum.eattr;
       g
