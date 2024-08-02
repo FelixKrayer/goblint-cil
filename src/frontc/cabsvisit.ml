@@ -198,9 +198,9 @@ and childrenTypeSpecifier vis ts =
       let fg' = mapNoCopy childrenFieldGroup fg in
       if fg' != fg then Tunion( n, Some fg', extraAttrs) else ts
   | Tenum (n, Some ei, extraAttrs) ->
-      let doOneEnumItem ((s, e, loc) as ei) =
+      let doOneEnumItem ((s, attrs, e, loc) as ei) =
         let e' = visitCabsExpression vis e in
-        if e' != e then (s, e', loc) else ei
+        if e' != e then (s, attrs, e', loc) else ei (* TODO: visit attrs? *)
       in
       vis#vEnterScope ();
       let ei' = mapNoCopy doOneEnumItem ei in

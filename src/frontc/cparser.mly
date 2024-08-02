@@ -1188,8 +1188,8 @@ enum_list: /* (* ISO 6.7.2.2 *) */
 |   enum_list COMMA error               { $1 }
 ;
 enumerator:
-    IDENT			{(fst $1, NOTHING, snd $1)}
-|   IDENT EQ expression		{(fst $1, fst $3, snd $1)}
+    IDENT attributes			{(fst $1, $2, NOTHING, snd $1)}
+|   IDENT attributes EQ expression		{(fst $1, $2, fst $4, snd $1)}
 ;
 
 

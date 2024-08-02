@@ -2675,7 +2675,7 @@ let rec doSpecList (suggestedAnonName: string) (* This string will be part of
     | [A.Tenum (n, Some eil, extraAttrs)] -> (* A definition of an enum *)
         let rec justNames eil = match eil with
             [] -> []
-          | (str, expr, loc) :: eis -> str :: justNames eis
+          | (str, attrs, expr, loc) :: eis -> str :: justNames eis (* TODO: use attrs *)
         in
         let names = justNames eil in
         let n' =
@@ -2736,11 +2736,11 @@ let rec doSpecList (suggestedAnonName: string) (* This string will be part of
 
         and loop i = function
             [] -> []
-          | (kname, A.NOTHING, cloc) :: rest ->
+          | (kname, attrs, A.NOTHING, cloc) :: rest -> (* TODO: use attrs *)
               (* use the passed-in 'i' as the value, since none specified *)
               processName kname i (convLoc cloc) rest
 
-          | (kname, e, cloc) :: rest ->
+          | (kname, attrs, e, cloc) :: rest -> (* TODO: use attrs *)
               (* constant-eval 'e' to determine tag value *)
               let e' = getIntConstExp e in
               let e'' =
