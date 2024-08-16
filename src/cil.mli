@@ -423,7 +423,7 @@ and fieldinfo = {
 and enuminfo = {
     mutable ename: string;
     (** The name. Always non-empty. *)
-    mutable eitems: (string * exp * location) list;
+    mutable eitems: (string * attributes * exp * location) list;
     (** Items with names and values. This list should be non-empty. The item
        values must be compile-time constants. *)
     mutable eattr: attributes;
